@@ -11,10 +11,25 @@ class Devise::SessionsController < ApplicationController
 
   # POST /resource/sign_in
   def create
-    resource = warden.authenticate!(:scope => resource_name, :recall => "#{controller_path}#new")
-    set_flash_message(:notice, :signed_in) if is_navigational_format?
-    sign_in(resource_name, resource)
-    respond_with resource, :location => redirect_location(resource_name, resource)
+  
+    if resource_name.to_s == 'user'
+      @user = User.first(:email => params[:user][:email])
+      if @user.confirmed?
+        resource = warden.authenticate!(:scope => resource_name, :recall => "#{controller_path}#new")
+        set_flash_message(:notice, :signed_in) if is_navigational_format?
+        sign_in(resource_name, resource)
+         respond_with resource, :location => redirect_location(resource_name, resource)
+      else
+        flash[:notice] = "You must confirm your account before you log in."
+        redirect_to '/login'
+      end
+    else
+      resource = warden.authenticate!(:scope => resource_name, :recall => "#{controller_path}#new")
+      set_flash_message(:notice, :signed_in) if is_navigational_format?
+      sign_in(resource_name, resource)
+      respond_with resource, :location => redirect_location(resource_name, resource)
+    end
+   
   end
 
   # GET /resource/sign_out
