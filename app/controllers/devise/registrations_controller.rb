@@ -35,11 +35,7 @@ class Devise::RegistrationsController < ApplicationController
   end
 
   # PUT /resource
-  # We need to use a copy of the resource because we don't want to change
-  # the current user in place.
   def update
-    self.resource = resource_class.to_adapter.get!(send(:"current_#{resource_name}").to_key)
-
     if resource.update_with_password(params[resource_name])
       set_flash_message :notice, :updated if is_navigational_format?
       sign_in resource_name, resource, :bypass => true
@@ -106,9 +102,11 @@ class Devise::RegistrationsController < ApplicationController
       end
     end
 
-    # Authenticates the current scope and gets the current resource from the session.
+    # Authenticates the current scope and gets a copy of the current resource.
+    # We need to use a copy because we don't want actions like update changing
+    # the current user in place.
     def authenticate_scope!
       send(:"authenticate_#{resource_name}!", true)
-      self.resource = send(:"current_#{resource_name}")
+      self.resource = resource_class.to_adapter.get!(send(:"current_#{resource_name}").to_key)
     end
 end

@@ -91,8 +91,7 @@ MESSAGE
       # Example:
       #   before_filter :require_no_authentication, :only => :new
       def require_no_authentication
-        args = devise_mapping.no_input_strategies.dup.push :scope => resource_name
-        if warden.authenticate?(*args)
+        if warden.authenticated?(resource_name)
           resource = warden.user(resource_name)
           flash[:alert] = I18n.t("devise.failure.already_authenticated")
           redirect_to after_sign_in_path_for(resource)

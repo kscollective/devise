@@ -314,9 +314,8 @@ class AuthenticationOthersTest < ActionController::IntegrationTest
   end
 
   test 'render 404 on roles without routes' do
-    assert_raise ActionController::RoutingError do
-      get '/admin_area/password/new'
-    end
+    get '/admin_area/password/new'
+    assert_equal 404, response.status
   end
 
   test 'does not intercept Rails 401 responses' do
@@ -447,9 +446,7 @@ class AuthenticationSignOutViaTest < ActionController::IntegrationTest
 
   test 'do not allow sign out via get when sign_out_via provides only delete' do
     sign_in!(:sign_out_via_delete)
-    assert_raise ActionController::RoutingError do
-      get destroy_sign_out_via_delete_session_path
-    end
+    get destroy_sign_out_via_delete_session_path
     assert warden.authenticated?(:sign_out_via_delete)
   end
 
@@ -461,9 +458,7 @@ class AuthenticationSignOutViaTest < ActionController::IntegrationTest
 
   test 'do not allow sign out via get when sign_out_via provides only post' do
     sign_in!(:sign_out_via_post)
-    assert_raise ActionController::RoutingError do
-      get destroy_sign_out_via_delete_session_path
-    end
+    get destroy_sign_out_via_delete_session_path
     assert warden.authenticated?(:sign_out_via_post)
   end
 
@@ -481,9 +476,7 @@ class AuthenticationSignOutViaTest < ActionController::IntegrationTest
 
   test 'do not allow sign out via get when sign_out_via provides delete and post' do
     sign_in!(:sign_out_via_delete_or_post)
-    assert_raise ActionController::RoutingError do
-      get destroy_sign_out_via_delete_or_post_session_path
-    end
+    get destroy_sign_out_via_delete_or_post_session_path
     assert warden.authenticated?(:sign_out_via_delete_or_post)
   end
 end

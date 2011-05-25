@@ -114,7 +114,9 @@ class OmniauthableIntegrationTest < ActionController::IntegrationTest
   test "generates a proper link when SCRIPT_NAME is set" do
     header 'SCRIPT_NAME', '/q'
     visit "/users/sign_in"
-    assert_select "a", :href => "/q/users/auth/facebook"
+    click_link "Sign in with Facebook"
+
+    assert_equal '/q/users/auth/facebook', current_url
   end
 
   test "handles callback error parameter according to the specification" do

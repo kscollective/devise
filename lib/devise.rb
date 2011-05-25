@@ -3,7 +3,6 @@ require 'active_support/core_ext/numeric/time'
 require 'active_support/dependencies'
 require 'orm_adapter'
 require 'set'
-require 'securerandom'
 
 module Devise
   autoload :FailureApp, 'devise/failure_app'
@@ -11,7 +10,6 @@ module Devise
   autoload :PathChecker, 'devise/path_checker'
   autoload :Schema, 'devise/schema'
   autoload :TestHelpers, 'devise/test_helpers'
-  autoload :Email, 'devise/email'
 
   module Controllers
     autoload :Helpers, 'devise/controllers/helpers'
@@ -43,9 +41,6 @@ module Devise
   ROUTES      = ActiveSupport::OrderedHash.new
   STRATEGIES  = ActiveSupport::OrderedHash.new
   URL_HELPERS = ActiveSupport::OrderedHash.new
-
-  # Strategies that do not require user input.
-  NO_INPUT = []
 
   # True values used to check params
   TRUE_VALUES = [true, 1, '1', 't', 'T', 'true', 'TRUE']
@@ -96,11 +91,9 @@ module Devise
   mattr_accessor :http_authentication_realm
   @@http_authentication_realm = "Application"
 
-  # Email regex used to validate email formats. Based on RFC 822 and
-  # retrieved from Sixarm email validation gem
-  # (https://github.com/SixArm/sixarm_ruby_email_address_validation).
+  # Email regex used to validate email formats. Adapted from authlogic.
   mattr_accessor :email_regexp
-  @@email_regexp = Devise::Email::EXACT_PATTERN
+  @@email_regexp = /\A([\w\.%\+\-]+)@([\w\-]+\.)+([\w]{2,})\z/i
 
   # Range validation for password length
   mattr_accessor :password_length
@@ -179,7 +172,7 @@ module Devise
   mattr_accessor :reset_password_keys
   @@reset_password_keys = [ :email ]
 
-  # Time interval you can reset your password with a reset password key
+  # Time interval you can reset your password with a reset password key 
   mattr_accessor :reset_password_within
   @@reset_password_within = nil
 
@@ -238,20 +231,9 @@ module Devise
     yield self
   end
 
-  class Getter
-    def initialize name
-      @name = name
-    end
-
-    def get
-      ActiveSupport::Dependencies.constantize(@name)
-    end
-  end
-
   def self.ref(arg)
     if defined?(ActiveSupport::Dependencies::ClassCache)
-      ActiveSupport::Dependencies::reference(arg)
-      Getter.new(arg)
+      ActiveSupport::Dependencies::Reference.store(arg)
     else
       ActiveSupport::Dependencies.ref(arg)
     end
@@ -263,7 +245,11 @@ module Devise
 
   # Get the mailer class from the mailer reference object.
   def self.mailer
-    @@mailer_ref.get
+    if defined?(ActiveSupport::Dependencies::ClassCache)
+      @@mailer_ref.get "Devise::Mailer"
+    else
+      @@mailer_ref.get
+    end
   end
 
   # Set the mailer reference object to access the mailer.
@@ -304,16 +290,12 @@ module Devise
     options.assert_valid_keys(:strategy, :model, :controller, :route)
 
     if strategy = options[:strategy]
-      strategy = (strategy == true ? module_name : strategy)
-      STRATEGIES[module_name] = strategy
+      STRATEGIES[module_name] = (strategy == true ? module_name : strategy)
     end
 
     if controller = options[:controller]
-      controller = (controller == true ? module_name : controller)
-      CONTROLLERS[module_name] = controller
+      CONTROLLERS[module_name] = (controller == true ? module_name : controller)
     end
-
-    NO_INPUT << strategy if strategy && controller != :sessions
 
     if route = options[:route]
       case route
@@ -364,8 +346,7 @@ module Devise
   #
   def self.omniauth(provider, *args)
     @@helpers << Devise::OmniAuth::UrlHelpers
-    config = Devise::OmniAuth::Config.new(provider, args)
-    @@omniauth_configs[config.strategy_name.to_sym] = config
+    @@omniauth_configs[provider] = Devise::OmniAuth::Config.new(provider, args)
   end
 
   # Include helpers in the given scope to AC and AV.
@@ -404,7 +385,7 @@ module Devise
 
   # Generate a friendly string randomically to be used as token.
   def self.friendly_token
-    SecureRandom.base64(15).tr('+/=', 'xyz')
+    ActiveSupport::SecureRandom.base64(15).tr('+/=', 'xyz')
   end
 
   # constant-time comparison algorithm to prevent timing attacks
